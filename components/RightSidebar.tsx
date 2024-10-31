@@ -1,7 +1,9 @@
+"use clientclea";
+
 import React, { useMemo, useRef } from "react";
 
 import { RightSidebarProps } from "@/types/type";
-import { bringElement, modifyShape } from "@/lib/shapes";
+import { modifyShape } from "@/lib/shapes";
 
 import Text from "./settings/Text";
 import Color from "./settings/Color";
@@ -14,7 +16,7 @@ const RightSidebar = ({
   fabricRef,
   activeObjectRef,
   isEditingRef,
-  syncShapeInStorage,
+  updateCanvasObject,
 }: RightSidebarProps) => {
   const colorInputRef = useRef(null);
   const strokeInputRef = useRef(null);
@@ -29,7 +31,7 @@ const RightSidebar = ({
       property,
       value,
       activeObjectRef,
-      syncShapeInStorage,
+      updateCanvasObject,
     });
   };
   

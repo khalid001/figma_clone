@@ -9,7 +9,6 @@ import {
   CanvasObjectScaling,
   CanvasPathCreated,
   CanvasSelectionCreated,
-  RenderCanvas,
 } from "@/types/type";
 import { defaultNavElement } from "@/constants";
 import { createSpecificShape } from "./shapes";
@@ -45,58 +44,47 @@ export const handleCanvasMouseDown = ({
   isDrawing,
   shapeRef,
 }: CanvasMouseDown) => {
-  // get pointer coordinates
   const pointer = canvas.getPointer(options.e);
-
-  /**
-   * get target object i.e., the object that is clicked
-   * findtarget() returns the object that is clicked
-   *
-   * findTarget: http://fabricjs.com/docs/fabric.Canvas.html#findTarget
-   */
   const target = canvas.findTarget(options.e, false);
 
-  // set canvas drawing mode to false
+  console.log('=== MouseDown Debug ===');
+  console.log('Pointer:', pointer);
+  console.log('Target:', target);
+  console.log('Target Type:', target?.type);
+  console.log('Selected Shape:', selectedShapeRef.current);
+  console.log('Is Drawing:', isDrawing.current);
+
   canvas.isDrawingMode = false;
 
-  // if selected shape is freeform, set drawing mode to true and return
   if (selectedShapeRef.current === "freeform") {
+    console.log('Entering freeform mode');
     isDrawing.current = true;
     canvas.isDrawingMode = true;
     canvas.freeDrawingBrush.width = 5;
     return;
   }
-
   canvas.isDrawingMode = false;
-
-  // if target is the selected shape or active selection, set isDrawing to false
   if (
     target &&
     (target.type === selectedShapeRef.current ||
       target.type === "activeSelection")
   ) {
+    console.log('Target matched - Setting active object');
+    console.log('Target type:', target.type);
+    console.log('Selected shape:', selectedShapeRef.current);
     isDrawing.current = false;
-
-    // set active object to target
     canvas.setActiveObject(target);
-
-    /**
-     * setCoords() is used to update the controls of the object
-     * setCoords: http://fabricjs.com/docs/fabric.Object.html#setCoords
-     */
     target.setCoords();
   } else {
+    console.log('Creating new shape');
+    console.log('Shape type:', selectedShapeRef.current);
     isDrawing.current = true;
-
-    // create custom fabric object/shape and set it to shapeRef
     shapeRef.current = createSpecificShape(
       selectedShapeRef.current,
       pointer as any
     );
-
-    // if shapeRef is not null, add it to canvas
     if (shapeRef.current) {
-      // add: http://fabricjs.com/docs/fabric.Canvas.html#add
+      console.log('New shape created:', shapeRef.current);
       canvas.add(shapeRef.current);
     }
   }
@@ -109,16 +97,18 @@ export const handleCanvaseMouseMove = ({
   isDrawing,
   selectedShapeRef,
   shapeRef,
-  syncShapeInStorage,
+  updateCanvasObject,
 }: CanvasMouseMove) => {
-  // if selected shape is freeform, return
   if (!isDrawing.current) return;
   if (selectedShapeRef.current === "freeform") return;
 
-  canvas.isDrawingMode = false;
-
-  // get pointer coordinates
   const pointer = canvas.getPointer(options.e);
+  console.log('=== MouseMove Debug ===');
+  console.log('Pointer:', pointer);
+  console.log('Shape Ref:', shapeRef.current);
+  console.log('Selected Shape:', selectedShapeRef.current);
+
+  canvas.isDrawingMode = false;
 
   // depending on the selected shape, set the dimensions of the shape stored in shapeRef in previous step of handelCanvasMouseDown
   // calculate shape dimensions based on pointer coordinates
@@ -164,9 +154,9 @@ export const handleCanvaseMouseMove = ({
   // renderAll: http://fabricjs.com/docs/fabric.Canvas.html#renderAll
   canvas.renderAll();
 
-  // sync shape in storage
+  // Update local state instead of syncing to storage
   if (shapeRef.current?.objectId) {
-    syncShapeInStorage(shapeRef.current);
+    updateCanvasObject(shapeRef.current);
   }
 };
 
@@ -177,14 +167,19 @@ export const handleCanvasMouseUp = ({
   shapeRef,
   activeObjectRef,
   selectedShapeRef,
-  syncShapeInStorage,
+  updateCanvasObject,
   setActiveElement,
 }: CanvasMouseUp) => {
+  console.log('=== MouseUp Debug ===');
+  console.log('Is Drawing:', isDrawing.current);
+  console.log('Shape Ref:', shapeRef.current);
+  console.log('Selected Shape:', selectedShapeRef.current);
+  
   isDrawing.current = false;
   if (selectedShapeRef.current === "freeform") return;
 
-  // sync shape in storage as drawing is stopped
-  syncShapeInStorage(shapeRef.current);
+  // Update local state
+  updateCanvasObject(shapeRef.current);
 
   // set everything to null
   shapeRef.current = null;
@@ -202,34 +197,37 @@ export const handleCanvasMouseUp = ({
 // update shape in storage when object is modified
 export const handleCanvasObjectModified = ({
   options,
-  syncShapeInStorage,
+  updateCanvasObject,
 }: CanvasObjectModified) => {
   const target = options.target;
+  console.log('=== Object Modified Debug ===');
+  console.log('Modified Target:', target);
+  console.log('Target Type:', target?.type);
+
   if (!target) return;
 
-  if (target?.type == "activeSelection") {
-    // fix this
+  if (target?.type === "activeSelection") {
+    // Handle multiple selection if needed
+    const objects = (target as fabric.ActiveSelection).getObjects();
+    objects.forEach((obj) => updateCanvasObject(obj));
   } else {
-    syncShapeInStorage(target);
+    updateCanvasObject(target);
   }
 };
 
 // update shape in storage when path is created when in freeform mode
 export const handlePathCreated = ({
   options,
-  syncShapeInStorage,
+  updateCanvasObject,
 }: CanvasPathCreated) => {
-  // get path object
   const path = options.path;
   if (!path) return;
 
-  // set unique id to path object
   path.set({
     objectId: uuid4(),
   });
 
-  // sync shape in storage
-  syncShapeInStorage(path);
+  updateCanvasObject(path);
 };
 
 // check how object is moving on canvas and restrict it to canvas boundaries
@@ -276,14 +274,18 @@ export const handleCanvasSelectionCreated = ({
   isEditingRef,
   setElementAttributes,
 }: CanvasSelectionCreated) => {
-  // if user is editing manually, return
+  console.log('=== Selection Created Debug ===');
+  console.log('Selected Objects:', options?.selected);
+  console.log('Is Editing:', isEditingRef.current);
+  console.log('options:', options);
   if (isEditingRef.current) return;
-
-  // if no element is selected, return
   if (!options?.selected) return;
 
   // get the selected element
   const selectedElement = options?.selected[0] as fabric.Object;
+
+  console.log('selectedElement:', selectedElement);
+  console.log('options selectedElement  Length:', options.selected.length);
 
   // if only one element is selected, set element attributes
   if (selectedElement && options.selected.length === 1) {
@@ -334,52 +336,6 @@ export const handleCanvasObjectScaling = ({
   }));
 };
 
-// render canvas objects coming from storage on canvas
-export const renderCanvas = ({
-  fabricRef,
-  canvasObjects,
-  activeObjectRef,
-}: RenderCanvas) => {
-  // clear canvas
-  fabricRef.current?.clear();
-
-  // render all objects on canvas
-  Array.from(canvasObjects, ([objectId, objectData]) => {
-    /**
-     * enlivenObjects() is used to render objects on canvas.
-     * It takes two arguments:
-     * 1. objectData: object data to render on canvas
-     * 2. callback: callback function to execute after rendering objects
-     * on canvas
-     *
-     * enlivenObjects: http://fabricjs.com/docs/fabric.util.html#.enlivenObjectEnlivables
-     */
-    fabric.util.enlivenObjects(
-      [objectData],
-      (enlivenedObjects: fabric.Object[]) => {
-        enlivenedObjects.forEach((enlivenedObj) => {
-          // if element is active, keep it in active state so that it can be edited further
-          if (activeObjectRef.current?.objectId === objectId) {
-            fabricRef.current?.setActiveObject(enlivenedObj);
-          }
-
-          // add object to canvas
-          fabricRef.current?.add(enlivenedObj);
-        });
-      },
-      /**
-       * specify namespace of the object for fabric to render it on canvas
-       * A namespace is a string that is used to identify the type of
-       * object.
-       *
-       * Fabric Namespace: http://fabricjs.com/docs/fabric.html
-       */
-      "fabric"
-    );
-  });
-
-  fabricRef.current?.renderAll();
-};
 
 // resize canvas dimensions on window resize
 export const handleResize = ({ canvas }: { canvas: fabric.Canvas | null }) => {

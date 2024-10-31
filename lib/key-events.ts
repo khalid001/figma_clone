@@ -16,8 +16,7 @@ export const handleCopy = (canvas: fabric.Canvas) => {
 };
 
 export const handlePaste = (
-  canvas: fabric.Canvas,
-  syncShapeInStorage: (shape: fabric.Object) => void
+  canvas: fabric.Canvas
 ) => {
   if (!canvas || !(canvas instanceof fabric.Canvas)) {
     console.error("Invalid canvas object. Aborting paste operation.");
@@ -45,7 +44,6 @@ export const handlePaste = (
               } as CustomFabricObject<any>);
 
               canvas.add(enlivenedObj);
-              syncShapeInStorage(enlivenedObj);
             });
             canvas.renderAll();
           },
@@ -59,8 +57,7 @@ export const handlePaste = (
 };
 
 export const handleDelete = (
-  canvas: fabric.Canvas,
-  deleteShapeFromStorage: (id: string) => void
+  canvas: fabric.Canvas
 ) => {
   const activeObjects = canvas.getActiveObjects();
   if (!activeObjects || activeObjects.length === 0) return;
@@ -69,7 +66,6 @@ export const handleDelete = (
     activeObjects.forEach((obj: CustomFabricObject<any>) => {
       if (!obj.objectId) return;
       canvas.remove(obj);
-      deleteShapeFromStorage(obj.objectId);
     });
   }
 
@@ -77,41 +73,43 @@ export const handleDelete = (
   canvas.requestRenderAll();
 };
 
-// create a handleKeyDown function that listen to different keydown events
+// First, update the type definition for handleKeyDown
+interface HandleKeyDownProps {
+  e: KeyboardEvent;
+  canvas: fabric.Canvas | null;
+  undo: () => void;
+  redo: () => void;
+  updateCanvasObject: (object: fabric.Object) => void;
+  deleteShapeFromStorage: (shapeId: string) => void;
+}
+
 export const handleKeyDown = ({
   e,
   canvas,
   undo,
   redo,
-  syncShapeInStorage,
+  updateCanvasObject,
   deleteShapeFromStorage,
-}: {
-  e: KeyboardEvent;
-  canvas: fabric.Canvas | any;
-  undo: () => void;
-  redo: () => void;
-  syncShapeInStorage: (shape: fabric.Object) => void;
-  deleteShapeFromStorage: (id: string) => void;
-}) => {
+}: HandleKeyDownProps) => {
   // Check if the key pressed is ctrl/cmd + c (copy)
-  if ((e?.ctrlKey || e?.metaKey) && e.keyCode === 67) {
+  if (canvas && (e?.ctrlKey || e?.metaKey) && e.keyCode === 67) {
     handleCopy(canvas);
   }
 
   // Check if the key pressed is ctrl/cmd + v (paste)
-  if ((e?.ctrlKey || e?.metaKey) && e.keyCode === 86) {
-    handlePaste(canvas, syncShapeInStorage);
+  if (canvas && (e?.ctrlKey || e?.metaKey) && e.keyCode === 86) {
+    handlePaste(canvas);
   }
 
   // Check if the key pressed is delete/backspace (delete)
   // if (e.keyCode === 8 || e.keyCode === 46) {
-  //   handleDelete(canvas, deleteShapeFromStorage);
+  //   handleDelete(canvas);
   // }
 
   // check if the key pressed is ctrl/cmd + x (cut)
-  if ((e?.ctrlKey || e?.metaKey) && e.keyCode === 88) {
+  if (canvas && (e?.ctrlKey || e?.metaKey) && e.keyCode === 88) {
     handleCopy(canvas);
-    handleDelete(canvas, deleteShapeFromStorage);
+    handleDelete(canvas);
   }
 
   // check if the key pressed is ctrl/cmd + z (undo)

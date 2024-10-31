@@ -94,7 +94,7 @@ export const handleImageUpload = ({
   file,
   canvas,
   shapeRef,
-  syncShapeInStorage,
+  updateCanvasObject,
 }: ImageUpload) => {
   const reader = new FileReader();
 
@@ -105,12 +105,14 @@ export const handleImageUpload = ({
 
       canvas.current.add(img);
 
+      canvas.current?.bringToFront(img);
+
       // @ts-ignore
       img.objectId = uuidv4();
-
       shapeRef.current = img;
 
-      syncShapeInStorage(img);
+      // Update local state instead of syncing
+      updateCanvasObject(img);
       canvas.current.requestRenderAll();
     });
   };
@@ -136,13 +138,13 @@ export const modifyShape = ({
   property,
   value,
   activeObjectRef,
-  syncShapeInStorage,
+  updateCanvasObject,
 }: ModifyShape) => {
   const selectedElement = canvas.getActiveObject();
 
   if (!selectedElement || selectedElement?.type === "activeSelection") return;
 
-  // if  property is width or height, set the scale of the selected element
+  // Handle width/height scaling
   if (property === "width") {
     selectedElement.set("scaleX", 1);
     selectedElement.set("width", value);  
@@ -154,33 +156,43 @@ export const modifyShape = ({
     selectedElement.set(property as keyof object, value);
   }
 
-  // set selectedElement to activeObjectRef
   activeObjectRef.current = selectedElement;
 
-  syncShapeInStorage(selectedElement);
+  // Update local state
+  updateCanvasObject(selectedElement);
+  canvas.renderAll(); // Add explicit render call
 };
 
 export const bringElement = ({
   canvas,
   direction,
-  syncShapeInStorage,
+  updateCanvasObject,
 }: ElementDirection) => {
   if (!canvas) return;
 
-  // get the selected element. If there is no selected element or there are more than one selected element, return
   const selectedElement = canvas.getActiveObject();
 
   if (!selectedElement || selectedElement?.type === "activeSelection") return;
 
-  // bring the selected element to the front
   if (direction === "front") {
     canvas.bringToFront(selectedElement);
   } else if (direction === "back") {
     canvas.sendToBack(selectedElement);
   }
 
-  // canvas.renderAll();
-  syncShapeInStorage(selectedElement);
+  // Update local state and render
+  updateCanvasObject(selectedElement);
+  canvas.renderAll();
+};
 
-  // re-render all objects on the canvas
+export const updateCanvasState = (
+  canvas: fabric.Canvas,
+  updateCanvasObject: (obj: fabric.Object) => void
+) => {
+  const objects = canvas.getObjects();
+  objects.forEach((obj: CustomFabricObject<fabric.Object>) => {
+    if (obj.objectId) {
+      updateCanvasObject(obj);
+    }
+  });
 };
