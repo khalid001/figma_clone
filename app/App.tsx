@@ -307,6 +307,9 @@ const Home = () => {
   }, [canvasRef]);
 
   
+  useEffect(() => {
+    console.log('Rendering Canvas with Objects:', Array.from(canvasObjects.entries()));
+  }, [canvasObjects]);
 
   return (
     <main className='h-screen overflow-hidden'>
