@@ -1,11 +1,10 @@
 "use client";
 
 import Navbar from "@/components/Navbar";
-import LeftSidebar from "@/components/LeftSidebar";
 import Live from "@/components/Live";
 import RightSidebar from "@/components/RightSidebar";
 import { defaultNavElement } from "@/constants";
-import { initializeFabric, handleCanvasMouseDown, handleCanvaseMouseMove, handleCanvasMouseUp, handlePathCreated, handleCanvasObjectModified, handleCanvasObjectMoving, handleCanvasSelectionCreated, handleCanvasObjectScaling, handleCanvasZoom, handleResize, renderCanvas } from "@/lib/canvas";
+import { initializeFabric, handleCanvasMouseDown, handleCanvaseMouseMove, handleCanvasMouseUp, handlePathCreated, handleCanvasObjectModified, handleCanvasObjectMoving, handleCanvasSelectionCreated, handleCanvasObjectScaling, handleCanvasZoom, handleResize } from "@/lib/canvas";
 import { handleDelete, handleKeyDown } from "@/lib/key-events";
 import { handleImageUpload } from "@/lib/shapes";
 import { ActiveElement } from "@/types/type";
